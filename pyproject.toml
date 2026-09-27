@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "task-calendar-local"
-version = "1.4.0"
+version = "1.5.0"
 description = "A local terminal task calendar with independent desktop reminders"
 requires-python = ">=3.10"
 dependencies = []

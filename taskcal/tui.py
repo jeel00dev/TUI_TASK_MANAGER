@@ -81,7 +81,9 @@ class App:
             pass
         self.theme.install()
         self.screen.bkgd(" ", self.theme.attr("plain"))
-        self.paint.setup()
+        graphics_notice = self.paint.setup()
+        if graphics_notice:
+            self.notice(graphics_notice)
 
     def notice(self, text):
         self.message, self.message_until = text, time.monotonic() + 6
@@ -389,7 +391,7 @@ class App:
                     label, value, hint = fields[index]
                     row = rect.y+3+(index-first)*3
                     active = index == focus
-                    self.paint.text(row+1, rect.x+3, label, "accent" if active else "panel_dim", 10)
+                    self.paint.text(row+1, rect.x+2, label, "accent" if active else "panel_dim", 10)
                     field=Rect(input_x,row,input_w,3)
                     self.paint.box(field, style="field_active" if active else "field_border", fill="field_focus" if active else "field", parent="panel")
                     self.modal_hits.append((field,"field",index))
@@ -398,10 +400,10 @@ class App:
                     self.paint.text(row+1,input_x+2,(value[offset:] if value else placeholder),"field_focus" if active else "field",input_w-4)
                     if active:
                         cursor_y, cursor_x = row+1, input_x+2+min(input_w-5,cell_width(value[offset:cursor]))
-                self.paint.text(rect.y+rect.h-5,rect.x+3,fields[focus][2],"panel_dim",rect.w-6)
-                self.paint.text(rect.y+rect.h-4,rect.x+3,error or "Blank dates keep a task in Inbox. All times are local.","overdue" if error else "panel_dim",rect.w-6)
-                self.modal_button(Rect(rect.x+3,rect.y+rect.h-2,15,1),"Ctrl-S Save","\x13",True)
-                self.modal_button(Rect(rect.x+20,rect.y+rect.h-2,13,1),"Esc Cancel","\x1b")
+                self.paint.text(rect.y+rect.h-5,rect.x+2,fields[focus][2],"panel_dim",rect.w-6)
+                self.paint.text(rect.y+rect.h-4,rect.x+2,error or "Blank dates keep a task in Inbox. All times are local.","overdue" if error else "panel_dim",rect.w-6)
+                self.modal_button(Rect(rect.x+2,rect.y+rect.h-2,15,1),"Ctrl-S Save","\x13",True)
+                self.modal_button(Rect(rect.x+19,rect.y+rect.h-2,13,1),"Esc Cancel","\x1b")
                 self.paint.text(rect.y+rect.h-2,rect.x+36,"Ctrl-U clear · Enter next","panel_dim",rect.w-39)
                 try:
                     self.screen.move(cursor_y,cursor_x)

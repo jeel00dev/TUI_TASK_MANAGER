@@ -2,7 +2,7 @@
 
 Only borders and corner masks are rasterized. Centers stay transparent so cell
 highlights, the current-time rule, text selection, and input remain native.
-Other terminals (including tmux) use Painter's normal character rendering.
+tmux panes use a native, transparent placeholder to position the graphics.
 """
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import base64
 import fcntl
 import math
 import os
+import secrets
 import struct
 import subprocess
 import sys
@@ -44,14 +45,14 @@ def inside_tmux():
 
 def supported():
     return (os.isatty(1) and bool(os.environ.get("KITTY_WINDOW_ID"))
-            and os.environ.get("TERM", "").startswith("xterm-kitty")
-            and not os.environ.get("NO_COLOR") and not inside_tmux() and bool(cell_size()))
+            and not os.environ.get("NO_COLOR")
+            and (inside_tmux() or os.environ.get("TERM", "").startswith("xterm-kitty") and bool(cell_size())))
 
 
 def radius_for(kind, width, height, cell_height):
     """Circular radii use the same non-overlap clamp as CSS border-radius."""
     desired = height / 2 if kind == "pill" else cell_height * {
-        "panel": 1.05, "task": .85, "field": .7, "frame": 1.05,
+        "panel": 1.05, "task": .85, "field": .7, "frame": 1.05, "tab": .75,
     }.get(kind, 1.05)
     return min(desired, width / 2, height / 2)
 
@@ -121,14 +122,20 @@ class Surface:
 
 
 class Chrome:
-    def __init__(self, write=None, metrics=None):
+    def __init__(self, write=None, metrics=None, transport=None):
         self.write = write or self._write
-        self.metrics = metrics or cell_size
+        self.transport = transport
+        self.metrics = metrics or (transport.metrics if transport else cell_size)
         self.size = self.metrics()
         self.surfaces = []
         self.cache = OrderedDict()
         self.placements = set()
         self.next_id = 100000 + (os.getpid() % 100000) * 1024
+        self.anchor = secrets.randbelow(0xffffff-1)+1 if transport else None
+        self.anchor_bg = (26,26,26)
+
+    def packet(self, data):
+        return self.transport.packet(data) if self.transport else data
 
     @staticmethod
     def _write(data):
@@ -139,7 +146,7 @@ class Chrome:
     def begin(self):
         size = self.metrics()
         if size and size != self.size:
-            self.close()
+            self.clear()
             self.size = size
         self.surfaces.clear()
 
@@ -166,7 +173,14 @@ class Chrome:
         if key in self.cache:
             self.cache.move_to_end(key)
             return self.cache[key]
-        insets = (cw/2-.5, ch/2-.5) if surface.kind == "frame" else (0, 0)
+        if surface.kind in ("frame", "panel"):
+            insets = (cw/2-.5, ch/2-.5)
+        elif surface.kind == "tab":
+            insets = (0,round(ch*.3))
+        elif surface.kind == "field":
+            insets = (0,max(2,round(ch*.15)))
+        else:
+            insets = (0,0)
         radius = radius_for(surface.kind, width-2*insets[0], height-2*insets[1], ch)
         rows = contour(width, height, radius, surface.fill, surface.outer,
                        surface.stroke, max(1, round(ch/20)), surface.accent,
@@ -191,20 +205,33 @@ class Chrome:
         if not self.size:
             return
         output = bytearray(b"\x1b7")  # Save the cursor used by native text input.
+        if self.anchor:
+            # This transparent 1-cell image is ordinary text in tmux's buffer.
+            # All chrome is relative to it: hiding/moving the pane hides/moves
+            # the graphics as well, without coordinates in the outer terminal.
+            output.extend(self.packet(command(f"a=t,f=32,s=1,v=1,i={self.anchor},q=2", b"AAAAAA==")))
+            output.extend(self.packet(command(f"a=p,U=1,i={self.anchor},p=1,c=1,r=1,q=2")))
+            red, green, blue = (self.anchor >> 16) & 255, (self.anchor >> 8) & 255, self.anchor & 255
+            bg = ";".join(map(str,self.anchor_bg))
+            output.extend(f"\x1b[1;1H\x1b[38;2;{red};{green};{blue};48;2;{bg}m\U0010eeee\u0305\u0305\x1b[0m".encode())
         # Curses may erase stored images when it clears a screen on resize.
         # Re-send each cached PNG once per frame; shared shapes reuse that upload.
         placements, uploaded = set(), set()
         for index, surface in enumerate(self.surfaces, 1):
             image_id, transmission = self._texture(surface, self.surfaces[index:])
             if image_id not in uploaded:
-                output.extend(transmission)
+                output.extend(self.packet(transmission))
                 uploaded.add(image_id)
             rect = surface.rect
-            output.extend(f"\x1b[{rect.y+1};{rect.x+1}H".encode("ascii"))
-            output.extend(command(f"a=p,i={image_id},p={index},q=2,C=1,z=-1"))
+            if self.anchor:
+                position = f",P={self.anchor},Q=1,H={rect.x},V={rect.y}"
+            else:
+                output.extend(f"\x1b[{rect.y+1};{rect.x+1}H".encode("ascii"))
+                position = ""
+            output.extend(self.packet(command(f"a=p,i={image_id},p={index},q=2,C=1,z=-1{position}")))
             placements.add((image_id,index))
         for image_id, placement in self.placements-placements:
-            output.extend(command(f"a=d,d=i,i={image_id},p={placement},q=2"))
+            output.extend(self.packet(command(f"a=d,d=i,i={image_id},p={placement},q=2")))
         self.placements = placements
         # Bound terminal image memory during long sessions / repeated resizing.
         used = {image_id for image_id,_ in placements}
@@ -212,14 +239,20 @@ class Chrome:
             if len(self.cache) <= 128:
                 break
             if image_id not in used:
-                output.extend(command(f"a=d,d=I,i={image_id},q=2"))
+                output.extend(self.packet(command(f"a=d,d=I,i={image_id},q=2")))
                 del self.cache[key]
         output.extend(b"\x1b8")
         self.write(bytes(output))
 
-    def close(self):
+    def clear(self):
         if self.cache:
-            self.write(b"".join(command(f"a=d,d=I,i={image_id},q=2") for image_id, _ in self.cache.values()))
+            self.write(self.packet(b"".join(command(f"a=d,d=I,i={image_id},q=2") for image_id, _ in self.cache.values())))
         self.cache.clear()
         self.placements.clear()
         self.surfaces.clear()
+
+    def close(self):
+        self.clear()
+        if self.transport:
+            self.write(self.packet(command(f"a=d,d=I,i={self.anchor},q=2")))
+            self.transport.close()

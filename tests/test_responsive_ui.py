@@ -16,6 +16,22 @@ from test_terminal import Screen, TerminalSession
 
 
 class ResponsiveTests(VisualFixture):
+    def test_header_controls_stay_aligned_and_do_not_overlap_at_breakpoints(self):
+        for width in (90,103,104,110,111,112,131,132,160,230,300):
+            self.app.screen=self.app.paint.screen=Screen(55,width)
+            self.refresh()
+            controls=[r for r,a,v in self.app.views.hits if a=='key' and r.y==0]
+            self.assertEqual(7,len(controls))
+            self.assertEqual({3},{r.h for r in controls})
+            self.assertEqual(1,len({r.w for r in controls[:-1]}))
+            for left,right in zip(controls,controls[1:]):
+                self.assertLess(left.x+left.w,right.x)
+            self.assertEqual(width-2,controls[-1].x+controls[-1].w)
+            toolbar=[r for r,a,v in self.app.views.hits if r.y==4 and a=='key']
+            for i,left in enumerate(toolbar):
+                for right in toolbar[i+1:]:
+                    self.assertTrue(left.x+left.w<=right.x or right.x+right.w<=left.x)
+
     def click(self, action, value=None, double=False):
         rect=next(r for r,a,v in reversed(self.app.views.hits) if a==action and (value is None or v==value))
         self.app.mouse((rect.x+rect.w//2,rect.y+rect.h//2,"click",double))
@@ -23,7 +39,7 @@ class ResponsiveTests(VisualFixture):
 
     def test_view_controls_have_no_duplicate_today_tab(self):
         self.refresh()
-        tabs=[value for rect,action,value in self.app.views.hits if rect.y==0 and action=="key"]
+        tabs=[value for rect,action,value in self.app.views.hits if rect.y==0 and action=="key" and value!="a"]
         self.assertEqual(["d","w","m","y","i","H"],tabs)
         self.click("key","m")
         self.assertEqual("month",self.app.view)
@@ -217,7 +233,7 @@ class MouseTerminalTests(TerminalSession):
         self.pump(.2)
 
     def test_mouse_add_form_save_complete_and_undo(self):
-        self.click(101,1) # New task in the 110-column header.
+        self.click(104,1) # New task in the 110-column header.
         self.wait_for(lambda:b"NEW TASK" in self.output)
         self.send("Created entirely by mouse")
         self.click(16,27) # Save in the editor's footer.

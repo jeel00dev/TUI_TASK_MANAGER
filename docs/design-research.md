@@ -171,12 +171,12 @@ clear during resize can evict them. Synchronized output presents the text and
 edges together. Exiting frees the app's images and restores the terminal palette.
 There are no runtime downloads, external images, or font changes.
 
-Direct Kitty sessions enable this automatically. Actual tmux panes, other
+In version 1.4.0, direct Kitty sessions enabled this automatically. Actual tmux panes, other
 terminals, and NO_COLOR use the character renderer: passing graphics around a
 multiplexer risks leaving shapes behind when changing panes or windows. An
 inherited TMUX environment variable does not disable graphics in a fresh Kitty
-window. The fallback preserves every keyboard and mouse action. Launch
-`kitty task` from tmux to use the smooth rendering in a separate terminal window.
+window. The fallback preserved every keyboard and mouse action. Version 1.5.0
+below replaces that tmux limitation; a separate Kitty window is no longer needed.
 
 Year date rows now share the available month height, with click targets extending
 through the spacing. The footer retains task context. Compact cards still show
@@ -189,3 +189,62 @@ mouse tab switching, font resizing, and an unsaved editor draft through the
 minimum-size screen. A disposable tmux session passed mouse capture, save,
 Inbox selection and completion. The summary distribution bar now uses a half-cell
 stroke instead of a thin rule. Screenshots use disposable preview data.
+
+
+## tmux rendering and layout consistency (1.5.0)
+
+### Existing-window workflow
+
+The previous release deliberately disabled graphics in tmux. That did not meet
+the intended `Kitty → tmux → task` workflow. This release keeps the same command
+and renders inside the current pane.
+
+Kitty documents [relative placements](https://sw.kovidgoyal.net/kitty/graphics-protocol/#relative-placements)
+whose parent can be a transparent Unicode placeholder. The placeholder is normal
+text in tmux's screen buffer; graphics attached to it follow its location and
+visibility. This avoids absolute client coordinates and redraw hooks. Image
+commands travel through [tmux's pane-local passthrough](https://man.openbsd.org/tmux.1#allow-passthrough).
+The app temporarily enables the option for its own pane, restoring the previous
+value on exit. No global tmux options or configuration files are changed.
+
+All image commands suppress replies, avoiding accidental keyboard input from
+terminal protocol responses. The renderer uses actual tmux cell metrics, clips
+modal occlusion, and keeps task text and mouse hit targets in the native cell
+layout. A newly launched Kitty window with inherited TMUX variables is detected
+as a direct terminal by comparing its TTY with the named pane's TTY.
+
+### Layout research and decisions
+
+IBM Carbon's [grid guidance](https://carbondesignsystem.com/elements/2x-grid/overview/)
+uses consistent alignment lines, fixed spacing and fluid content areas. Its
+[spacing guidance](https://carbondesignsystem.com/elements/spacing/overview/)
+connects repeated spacing with visual grouping. The [button guidance](https://carbondesignsystem.com/components/button/usage/)
+recommends matching sizes within a group. These principles inform the layout;
+the app retains the supplied ZCode colors and terminal typography.
+
+- The calendar and sidebar share their top and bottom edges. The sidebar uses
+  roughly one fifth of the width, bounded to keep both notes and dates readable.
+- A three-column horizontal gutter and a one-row vertical gutter have similar
+  physical size after border insets in a typical 8×17-pixel terminal cell.
+- Six view tabs have equal widths. New task matches their height and baseline.
+  The date toolbar occupies a separate row with equal-width action controls.
+- Panel borders share the calendar's insets. Inputs have a small vertical inset,
+  producing a consistent gap without reducing the number of visible fields.
+- Task titles and times share a left inset. Pixel borders allow short cards to
+  show both lines without spending two full text rows on border characters.
+- Month cards use all available grid height; adjacent months share date-row
+  baselines. Empty calendar weeks remain blank rather than inventing dates.
+- Details actions divide the complete width evenly. Sidebar sections fit the
+  available height, keeping full inspection and keyboard actions accessible.
+
+These are explicit terminal layout choices, not a claim that a single visual
+ratio establishes product quality. Tests cover layout bounds, interaction and
+renderer cleanup, with visual review at several sizes in actual Kitty/tmux.
+
+Validation: 111 tests passed. In Kitty 0.48.2 with tmux 3.7b, the installed
+`task` command was checked with disposable task data. SGR mouse events sent
+through the tmux client exercised capture, save, selection, completion and undo.
+Visual checks covered window switching, moving the app into a right-hand split,
+the status bar above the pane, font changes, and minimum-size recovery with an
+unsaved draft. The pane's passthrough option was restored after exit. The eight
+preview images now show the application running inside tmux.

@@ -78,9 +78,19 @@ class Painter:
         self.chrome = None
 
     def setup(self):
-        from .chrome import Chrome, supported
+        import subprocess
+        from .chrome import Chrome, inside_tmux, supported
+        from .terminal import TmuxTransport
         if self.theme.colors and supported():
-            self.chrome = Chrome()
+            try:
+                transport = TmuxTransport() if inside_tmux() else None
+                self.chrome = Chrome(transport=transport)
+                if not self.chrome.size:
+                    self.chrome.close()
+                    self.chrome = None
+                    return "Terminal cell dimensions unavailable; using text borders"
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                return f"Graphics unavailable: {exc}"
 
     def begin(self):
         if self.chrome:
@@ -88,6 +98,7 @@ class Painter:
 
     def refresh(self):
         if self.chrome:
+            self.chrome.anchor_bg = self.background(Rect(0,0,1,1))
             self.chrome.write(b"\x1b[?2026h")
         try:
             self.screen.refresh()
@@ -177,7 +188,7 @@ class Painter:
         if self.chrome:
             outer = self.background(rect) if parent is None else self.theme.colors[parent][1]
             kind = ("task" if style.endswith("_edge") else "field" if style.startswith("field")
-                    else "pill" if fill in ("button", "active_tab") else "panel" if fill else "frame")
+                    else "tab" if fill in ("button", "active_tab") else "panel" if fill else "frame")
             self.fill(rect, fill or "plain")
             accent = style.split("_",1)[0] if kind == "task" else None
             self.rounded(rect, fill or "plain", style, kind, outer, accent, bool(fill))

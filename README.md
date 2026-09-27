@@ -143,7 +143,7 @@ required and current dimensions, suspends hidden controls, and preserves editor
 drafts. At 132 columns and 40 rows the sidebar becomes available; at about
 160×48 the full week and sidebar fit comfortably. Narrow calendars show three
 days around the focused date, with arrow keys to pan. `b` toggles the sidebar.
-Year view distributes date rows over each month card, including clickable space
+Year view aligns date rows across neighboring month cards, including clickable space
 around the dates. It hides the sidebar when that makes room for 12 complete mini calendars,
 then switches to compact month cards if needed. Month view reduces the number of
 visible task rows as space decreases. `v` shows
@@ -151,13 +151,19 @@ the full agenda and Enter opens complete details at every supported size.
 
 The theme follows the supplied **ZCode** screenshot: #171717 workspace,
 #262626 panels, #313131 selections, subtle gray borders, and blue active controls.
-In a direct Kitty window, panels and task cards have smooth circular corners;
-tabs and small buttons have capsule ends. Radii scale with the terminal's cell
+In Kitty, including inside tmux, panels and task cards have smooth circular corners;
+tabs have equal widths and rounded rectangles; small buttons have capsule ends.
+Radii scale with the terminal's cell
 size: about 18 pixels for panels, 14 for tasks and 12 for fields at a 17-pixel
 cell height. Fills meet the thin outlines, and tasks have a thicker colored base.
 Kitty draws these locally generated borders behind ordinary terminal text; mouse
 input, text selection, and the live time rule stay native. No font or graphics
-packages are required. tmux and other terminals retain character-based borders.
+packages are required. Other terminals retain character-based borders. Inside tmux
+the app enables
+graphics passthrough for its own pane while running, then restores that pane
+option on exit. A native text anchor keeps the graphics attached to the pane
+when switching windows, moving splits, and zooming. Run `task` normally; no
+separate Kitty window or tmux configuration change is needed.
 Task fills are saturated, with lighter outlines and labels for contrast.
 Tasks use blue pending work, orange
 ongoing work, quieter green completed work, and red overdue work. Long pending
@@ -174,12 +180,9 @@ The [design research](docs/design-research.md) records primary sources, measured
 colors, layout decisions, and terminal limits. ZCode's site uses Geist Sans and
 Geist Mono. A TUI inherits its terminal's fixed-width font: it cannot render the
 proportional Sans UI. Smooth radii use Kitty graphics, with a character fallback
-elsewhere. To use the matching mono family when
-it is installed, launch a dedicated Kitty window without changing global settings:
-
-```sh
-kitty -o font_family='Geist Mono' -o background_opacity=1 task
-```
+elsewhere. The app uses the font of your existing Kitty window, including in
+tmux. You can choose Geist Mono in Kitty's font settings if it is installed;
+the application does not change your terminal configuration.
 
 ### Mouse
 

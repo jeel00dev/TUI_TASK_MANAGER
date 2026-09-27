@@ -91,9 +91,9 @@ class ChromeTests(unittest.TestCase):
         width,height,rows=pngs(output[-1])[0]
         self.assertEqual((160,170),(width,height))
         self.assertEqual((0,0,0,0),pixel(rows,50,0))
-        self.assertEqual(EDGE+(255,),pixel(rows,30,0))
+        self.assertEqual(EDGE+(255,),pixel(rows,30,8))
         # Masking one row must not mutate cached, otherwise equal rows.
-        self.assertNotEqual(pixel(rows,50,0),pixel(rows,50,169))
+        self.assertNotEqual(pixel(rows,50,0),pixel(rows,50,161))
         self.assertTrue(all(b'q=2' in p for p in re.findall(rb'\x1b_G([^;]*);',output[-1])))
         self.assertIn(b'C=1,z=-1',output[-1])
 
@@ -125,13 +125,13 @@ class ChromeTests(unittest.TestCase):
         self.assertFalse(renderer.cache)
         self.assertNotIn(b'a=d,d=A',b''.join(output))
 
-    def test_only_real_direct_kitty_enables_images(self):
+    def test_kitty_and_kitty_tmux_enable_images(self):
         with patch.dict('os.environ',{'KITTY_WINDOW_ID':'1','TERM':'xterm-kitty'},clear=True), patch('os.isatty',return_value=True), patch('taskcal.chrome.cell_size',return_value=(8,17)), patch('taskcal.chrome.inside_tmux',return_value=False):
             self.assertTrue(supported())
             with patch.dict('os.environ',{'NO_COLOR':'1'}):
                 self.assertFalse(supported())
             with patch('taskcal.chrome.inside_tmux',return_value=True):
-                self.assertFalse(supported())
+                self.assertTrue(supported())
             with patch.dict('os.environ',{'TERM':'screen-256color'}):
                 self.assertFalse(supported())
 
@@ -186,3 +186,19 @@ class RoundedAppTests(VisualFixture):
             self.assertEqual(count,len(self.app.paint.chrome.surfaces))
         self.app.draw()
         self.assertLess(len(self.app.paint.chrome.surfaces),count)
+
+    def test_sidebar_shares_top_and_bottom_edges_with_calendar(self):
+        self.add()
+        for height in (40,45,55,70):
+            self.app.screen=self.app.paint.screen=Screen(height,230)
+            for view in ('day','week','month','year'):
+                self.app.view=view
+                self.refresh()
+                main=next(r for r,a,v in self.app.views.hits if a=='scroll')
+                panels=[s.rect for s in self.app.paint.chrome.surfaces
+                        if s.kind=='panel' and s.rect.x>=main.x+main.w]
+                if panels:
+                    self.assertEqual(main.y,panels[0].y)
+                    self.assertEqual(main.y+main.h,panels[-1].y+panels[-1].h)
+                    self.assertEqual(1,len({p.x for p in panels}))
+                    self.assertEqual(1,len({p.w for p in panels}))

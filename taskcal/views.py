@@ -12,6 +12,14 @@ from .model import midnight, schedule_text
 
 
 MIN_COLUMNS, MIN_ROWS = 90, 28
+MARGIN, GUTTER, CONTENT_TOP = 2, 3, 6
+
+
+def tracks(start, length, count, gap=0):
+    """Share all available cells; edges differ by at most one cell."""
+    usable = length-gap*(count-1)
+    return [(start+i*usable//count+i*gap, usable*(i+1)//count-usable*i//count)
+            for i in range(count)]
 
 
 def circled(day):
@@ -119,12 +127,12 @@ class Views:
             self.small(flush)
             return
         self.header(width)
-        area = Rect(1, 4, width - 3, height - 7)
+        area = Rect(MARGIN, CONTENT_TOP, width-2*MARGIN, height-CONTENT_TOP-3)
         sidebar = a.sidebar and width >= 132 and height >= 40
         if sidebar:
-            sw = min(40, max(32, width // 5))
-            main = Rect(area.x, area.y, area.w - sw - 2, area.h)
-            side = Rect(main.x + main.w + 2, area.y, sw, area.h)
+            sw = min(48, max(32, area.w // 5))
+            main = Rect(area.x, area.y, area.w-sw-GUTTER, area.h)
+            side = Rect(main.x+main.w+GUTTER, area.y, sw, area.h)
         else:
             main, side = area, None
         if a.view == "year" and not a.agenda and side and year_geometry(main)[3] < 10 <= year_geometry(area)[3]:
@@ -150,30 +158,32 @@ class Views:
     def header(self, width):
         a, p = self.a, self.p
         p.fill(Rect(0, 0, width, 3), "status")
-        p.text(1, 2, "TASK", "heading", bold=True)
-        x = 9
+        p.text(1, MARGIN, "TASK", "status", bold=True)
+        tab_width = 13 if width >= 112 else 11
+        x = 8
         for key,label,view in [("d","Day","day"),("w","Week","week"),("m","Month","month"),("y","Year","year"),("i","Inbox","inbox"),("H","History","history")]:
-            text = f"{label} {key}" if width >= 104 else label
-            self.button(Rect(x,0,len(text)+4,3),text,"key",key,a.view==view)
-            x += len(text)+5
-        if width >= 132:
+            text = f"{label} {key}" if width >= 112 else label
+            self.button(Rect(x,0,tab_width,3),text,"key",key,a.view==view)
+            x += tab_width+1
+        new_width = 14 if width >= 112 else 6
+        new_x = width-MARGIN-new_width
+        if new_x-x >= 24:
             clock = a.at.strftime("%a %d %b  %H:%M")
-            p.text(1,x+2,clock,"status_dim")
-        self.button(Rect(width-15,1,12,1),"+ New task","key","a")
+            p.text(1,new_x-len(clock)-3,clock,"status_dim")
+        self.button(Rect(new_x,0,new_width,3),"+ New task" if width >= 112 else "+ a","key","a")
         lo, hi = bounds(a.day, a.view)
         title = {"day": a.day.strftime("%A, %d %B %Y"), "week": f"{lo:%d %b} – {hi-timedelta(days=1):%d %b %Y}", "month": a.day.strftime("%B %Y"), "year": f"{a.day.year} · {a.day:%d %b} selected", "inbox": "Inbox · ready to schedule", "history": "Completed history", "search": "Search · " + a.query}[a.view]
         if a.view in ("day","week","month","year"):
-            self.button(Rect(2,3,3,1),"‹","key","h")
-            self.button(Rect(6,3,3,1),"›","key","l")
-            self.hit(Rect(11,3,len(title),1),"key","g")
-            p.text(3,11,title,"heading",width-49)
+            self.button(Rect(MARGIN,4,3,1),"‹","key","h")
+            self.button(Rect(MARGIN+4,4,3,1),"›","key","l")
+            self.hit(Rect(11,4,min(len(title),width-58),1),"key","g")
+            p.text(4,11,ellipsis(title,width-58),"heading",width-58)
         else:
-            p.text(3,2,title,"heading",width-44)
-        x = width-39
-        self.button(Rect(x,3,9,1),"t Today","key","t")
-        self.button(Rect(x+10,3,9,1),"/ Search","key","/")
-        self.button(Rect(x+20,3,8,1),"f Filter","key","f",bool(a.filter))
-        self.button(Rect(x+29,3,7,1),"v List" if not a.agenda else "v Grid","key","v",a.agenda)
+            p.text(4,MARGIN,ellipsis(title,width-49),"heading",width-49)
+        for (x,w),(label,key,active) in zip(tracks(width-MARGIN-43,43,4,1),[
+                ("t Today","t",False),("/ Search","/",False),
+                ("f Filter","f",bool(a.filter)),("v List" if not a.agenda else "v Grid","v",a.agenda)]):
+            self.button(Rect(x,4,w,1),label,"key",key,active)
 
     def footer(self, width, height, sidebar):
         a, p = self.a, self.p
@@ -365,19 +375,25 @@ class Views:
         timing = starts + "–" + ends
         with p.within(rect):
             content_rows = [y for y in range(rect.y, rect.y+rect.h) if y != marker_y]
-            if len(content_rows) < 3:
+            if len(content_rows) < 3 and not p.chrome:
                 # A compact chip is intentionally borderless; don't draw broken boxes.
                 outer = p.background(rect)
                 p.fill(rect,fill)
-                p.rounded(rect,fill,edge,"task",outer,accent=color)
-                if not p.chrome:
-                    p.text(content_rows[0],rect.x,"▌",edge,1)
-                p.text(content_rows[0],rect.x+1,ellipsis(title,rect.w-2),fill,rect.w-2,bold=selected)
+                p.text(content_rows[0],rect.x,"▌",edge,1)
+                pad = 2 if rect.w >= 6 else 1
+                p.text(content_rows[0],rect.x+pad,ellipsis(title,rect.w-2*pad),fill,rect.w-2*pad,bold=selected)
                 if len(content_rows) == 2:
-                    p.text(content_rows[1],rect.x+1,timing,edge,rect.w-2)
+                    p.text(content_rows[1],rect.x+pad,timing,edge,rect.w-2*pad)
             else:
-                p.box(rect,style=edge,fill=fill,edge_aligned=True)
-                content_rows = [y for y in content_rows if rect.y < y < rect.y+rect.h-1]
+                if p.chrome:
+                    outer = p.background(rect)
+                    p.fill(rect,fill)
+                    p.rounded(rect,fill,edge,"task",outer,accent=color)
+                    if len(content_rows) > 2:
+                        content_rows = content_rows[:-1]
+                else:
+                    p.box(rect,style=edge,fill=fill,edge_aligned=True)
+                    content_rows = [y for y in content_rows if rect.y < y < rect.y+rect.h-1]
                 available = len(content_rows)
                 lines = wrap(title,max(1,rect.w-4))
                 title_rows = max(1,available-1) if available>1 else 1
@@ -386,7 +402,7 @@ class Views:
                         line=ellipsis(" ".join(lines[index:]),rect.w-4)
                     p.text(content_rows[index],rect.x+2,line,fill,rect.w-4,bold=selected)
                 if available>1:
-                    p.text(content_rows[-1],rect.x+1,timing,edge,rect.w-2)
+                    p.text(content_rows[-1],rect.x+2,timing,edge,rect.w-4)
         self.card_rects.append((rect,item.ref))
         self.hit(rect,"task",item.ref)
 
@@ -483,11 +499,13 @@ class Views:
                 by_day.setdefault(day, []).append(item)
                 day += timedelta(days=1)
         chosen = a.chosen()
+        month_columns = tracks(rect.x,rect.w,columns,GUTTER)
+        month_rows = tracks(rect.y,rect.h-2,rows,gap)
         for month in range(1, 13):
             row, col = divmod(month-1, columns)
-            x = rect.x + col * (rect.w+1) // columns
-            end = rect.x + (col+1) * (rect.w+1) // columns - 1
-            tile = Rect(x, rect.y + row*(tile_h+gap), end-x, tile_h)
+            x, tile_w = month_columns[col]
+            y, tile_h = month_rows[row]
+            tile = Rect(x,y,tile_w,tile_h)
             focused = month == a.day.month
             first = date(a.day.year, month, 1)
             self.hit(tile, "year_month", first)
@@ -500,26 +518,29 @@ class Views:
             busy_days = sum(day.year == first.year and day.month == month for day in by_day)
             summary = f"{len(items)} tasks · {busy_days} days" if items else "No scheduled tasks"
             if tile_h >= 10:
-                cell = (tile.w-2)//7
-                left = tile.x + (tile.w-cell*7)//2
+                dates = tracks(tile.x+2,tile.w-4,7)
                 for index, label in enumerate(("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")):
-                    p.centered(tile.y+2, Rect(left+index*cell,0,cell,1), label, "muted")
+                    left, cell = dates[index]
+                    p.centered(tile.y+2, Rect(left,0,cell,1), label, "muted")
                 weeks = calendar.Calendar().monthdayscalendar(a.day.year,month)
+                week_count = max(len(calendar.Calendar().monthdayscalendar(a.day.year,m))
+                                 for m in range(row*columns+1,(row+1)*columns+1))
                 date_top = tile.y+3
-                # Keep the footer clear, then share the remaining height among
-                # the actual weeks. Date hit targets include the added spacing.
+                # Neighboring months share row baselines. Padding remains part
+                # of the date target; blank final weeks are not invented dates.
                 footer_rows = 3 if tile_h >= 13 else (2 if tile_h >= 11 else 1)
                 date_height = tile.h-3-footer_rows
-                labels = [date_top + round(i*(date_height-1)/(len(weeks)-1)) for i in range(len(weeks))]
+                labels = [date_top + round(i*(date_height-1)/(week_count-1)) for i in range(week_count)]
                 for week_index, week in enumerate(weeks):
                     label_y = labels[week_index]
                     top = date_top if week_index == 0 else (labels[week_index-1]+label_y+1)//2
-                    bottom = date_top+date_height if week_index == len(weeks)-1 else (label_y+labels[week_index+1]+1)//2
+                    bottom = date_top+date_height if week_index == week_count-1 else (label_y+labels[week_index+1]+1)//2
                     for index, number in enumerate(week):
                         if not number:
                             continue
                         day = date(a.day.year,month,number)
-                        box = Rect(left+index*cell,label_y,cell,1)
+                        left, cell = dates[index]
+                        box = Rect(left,label_y,cell,1)
                         active = by_day.get(day, [])
                         if day == a.day:
                             style = "selected_day"
@@ -593,12 +614,15 @@ class Views:
             self.mini_calendar(Rect(rect.x,y,rect.w,12))
             y += 13
             remaining -= 13
-        details_h = min(20,remaining)
+        show_summary = remaining >= 40
+        context_h = min(15,max(8,remaining//3))
+        details_h = remaining-context_h-1-(9 if show_summary else 0)
+        details_h = max(12,details_h)
         with p.within(Rect(rect.x,y,rect.w,details_h)):
             self.details(Rect(rect.x,y,rect.w,details_h))
         y += details_h+1
         remaining -= details_h+1
-        if remaining >= 15:
+        if show_summary:
             self.summary(Rect(rect.x,y,rect.w,8))
             y += 9
             remaining -= 9
@@ -611,19 +635,20 @@ class Views:
         p.centered(rect.y+1,rect,a.day.strftime("%B %Y"),"panel_title")
         self.button(Rect(rect.x+1,rect.y+1,3,1),"‹","month",-1)
         self.button(Rect(rect.x+rect.w-4,rect.y+1,3,1),"›","month",1)
-        cell=4
-        left=rect.x+(rect.w-cell*7)//2
+        dates=tracks(rect.x+2,rect.w-4,7)
         for col,name in enumerate(("Mo","Tu","We","Th","Fr","Sa","Su")):
-            p.centered(rect.y+3,Rect(left+col*cell,0,cell,1),name,"panel_dim")
+            left,cell=dates[col]
+            p.centered(rect.y+3,Rect(left,0,cell,1),name,"panel_dim")
         for row,week in enumerate(calendar.Calendar().monthdatescalendar(a.day.year,a.day.month)):
             for col,day in enumerate(week):
-                box=Rect(left+col*cell,rect.y+4+row,cell,1)
+                left,cell=dates[col]
+                box=Rect(left,rect.y+4+row,cell,1)
                 style="active_tab" if day==a.day else ("accent" if day==a.at.date() else ("panel" if day.month==a.day.month else "panel_dim"))
                 p.fill(box,style)
                 label=circled(day.day) if day==a.at.date() else f"{day.day:2}"
                 p.centered(box.y,box,label,style)
                 self.hit(box,"date",day)
-        p.centered(rect.y+rect.h-2,rect,"Click date · double-click opens day","panel_dim")
+        p.centered(rect.y+rect.h-2,rect.inset(),"Double-click date to open","panel_dim")
 
     def details(self, rect):
         a,p=self.a,self.p
@@ -663,8 +688,8 @@ class Views:
                 text=ellipsis(text+" …",w)
             p.text(y+index,x,text,style,w,bold=index==0)
         self.button(Rect(x,rect.y+rect.h-3,w,1),"Enter · full details","key","\n")
-        for index,(label,key) in enumerate((("e Edit","e"),("x Done","x"),("r Move","r"))):
-            self.button(Rect(x+index*(w//3),rect.y+rect.h-2,w//3-1,1),label,"key",key)
+        for (left,width),(label,key) in zip(tracks(x,w,3,1),(("e Edit","e"),("x Done","x"),("r Move","r"))):
+            self.button(Rect(left,rect.y+rect.h-2,width,1),label,"key",key)
 
     def summary(self, rect):
         a, p = self.a, self.p

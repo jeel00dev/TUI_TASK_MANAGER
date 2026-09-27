@@ -62,7 +62,8 @@ class YearTests(VisualFixture):
             rows = sorted(set(r.y for r,_ in dates))
             self.assertEqual(len(calendar.Calendar().monthdayscalendar(2021,month)),len(rows))
             self.assertEqual(tile.y+3,rows[0])
-            self.assertEqual(tile.y+tile.h-3,max(r.y+r.h for r,_ in dates))
+            self.assertLessEqual(max(r.y+r.h for r,_ in dates),tile.y+tile.h-3)
+            self.assertGreaterEqual(max(r.y+r.h for r,_ in dates),tile.y+tile.h//2)
             heights = [r.h for r,_ in dates]
             self.assertGreater(min(heights),1)
             # The padding around a number selects that date, not its month tile.
@@ -92,6 +93,21 @@ class YearTests(VisualFixture):
         self.app.mouse((rect.x+2,rect.y+1,"click",True))
         self.refresh()
         self.assertEqual(("month",7),(self.app.view,self.app.day.month))
+
+    def test_neighboring_months_share_date_rows_and_bottom_edge(self):
+        self.app.screen=self.app.paint.screen=Screen(62,230)
+        self.year(date(2026,9,26))
+        tiles=[(r,v.month) for r,a,v in self.app.views.hits if a=='year_month']
+        for top in {r.y for r,_ in tiles}:
+            group=[(r,m) for r,m in tiles if r.y==top]
+            self.assertEqual(1,len({r.h for r,_ in group}))
+            rows=[]
+            for _,month in group:
+                rows.append(sorted({r.y for r,a,v in self.app.views.hits if a=='date' and v.month==month}))
+            first_rows=min(map(len,rows))
+            self.assertEqual(1,len({tuple(r[:first_rows]) for r in rows}))
+        main=next(r for r,a,v in self.app.views.hits if a=='scroll')
+        self.assertEqual(main.y+main.h-2,max(r.y+r.h for r,_ in tiles))
 
     def test_tasks_cross_years_and_changes_stay_shared_with_other_views(self):
         carry = self.add("Year-long project",start=datetime(2025,12,20),end=datetime(2027,2,1),all_day=True)
