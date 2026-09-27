@@ -272,3 +272,36 @@ launcher passed mouse-event checks through Kitty/tmux for capture, save,
 selection, Open, Edit, Move, completion and undo. Visual review covered all
 calendar scales, compact windows, font resizing, and an unsaved draft through
 the minimum-size screen. Preview images use disposable task data.
+
+## Toolbar consistency and date badges (1.6.0)
+
+The date toolbar and footer now use the same three-row control height as the
+view tabs. Narrow terminals retain Add, Edit, Done, Move, Delete, Undo and Help;
+Start and Quit remain available from their shortcuts and the command menu.
+Compact year layouts switch to four columns so all twelve months remain visible.
+Wide, shallow terminals use six columns and two rows, allowing readable date
+spacing without a sidebar. Taller windows retain four columns.
+
+Calendar dates use normal-sized numerals. A blue outline marks today and a filled
+badge marks the selected date. The renderer draws those shapes independently of
+the font, avoiding the small circled-number glyphs. Circle geometry uses pixel
+dimensions with equal width and height, generous padding around native text,
+and matching label/container parity to avoid half-cell centering errors. The
+sidebar spaces date rows two lines apart. Compact calendars use a text highlight
+when there is insufficient space for the larger circle. The focused day header uses
+one continuous surface behind its date and workload caption. Short captions
+fit narrow columns, and two-row task chips keep text above their lower edge.
+
+Delete is discoverable in the footer, selected-task panel and full inspector.
+All entry points use the existing reversible deletion operation; u restores the
+task or occurrence. The release includes updated screenshots, a captioned feature
+tour and a small source download. Recording details are in tour-production.md.
+
+Validation: 119 tests passed. The installed modules and downloadable archive
+match the source. A fresh extraction passed version, capture and Inbox-list
+checks. Kitty/tmux review covered every scale, compact layouts, mouse tabs,
+font changes and minimum-size recovery. The video was re-recorded after the date
+geometry fix. It includes an original synthesized soundtrack, animated title
+cards, eased zooms in and out, and captions for watching without sound.
+The complete 144-second H.264/AAC file decodes successfully; all 22 chapter
+markers and the local README/guide links were verified.

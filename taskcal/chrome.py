@@ -51,7 +51,7 @@ def supported():
 
 def radius_for(kind, width, height, cell_height):
     """Circular radii use the same non-overlap clamp as CSS border-radius."""
-    desired = height / 2 if kind == "pill" else cell_height * {
+    desired = height / 2 if kind in ("pill", "date") else cell_height * {
         "panel": 1.05, "task": .85, "field": .7, "frame": 1.05, "tab": .75,
     }.get(kind, 1.05)
     return min(desired, width / 2, height / 2)
@@ -62,7 +62,7 @@ def _chunk(kind, data):
 
 
 def contour(width, height, radius, fill, outer, stroke, weight=1, accent=None,
-            accent_height=0, insets=(0, 0)):
+            accent_height=0, insets=(0, 0), solid=False):
     """Return RGBA scanlines: opaque outside masks, AA edges, clear centers.
 
     Only the narrow edge bands need distance calculations. Interior pixels are
@@ -78,11 +78,16 @@ def contour(width, height, radius, fill, outer, stroke, weight=1, accent=None,
         qx = abs(x+.5-width/2) - (half_w-radius)
         qy = abs(y+.5-height/2) - (half_h-radius)
         distance = math.hypot(max(0, qx), max(0, qy)) + min(max(qx, qy), 0) - radius
-        if distance < -weight-.5 and not bottom:
+        if distance < -weight-.5 and not bottom and not solid:
             return transparent
         coverage = max(0., min(1., .5-distance))
         inside = 0 if bottom else max(0., min(1., .5-distance-weight))
         edge = accent if bottom else stroke
+        if solid:
+            if not coverage:
+                return transparent
+            return bytes(round((ink*(coverage-inside)+bg*inside)/coverage)
+                         for ink,bg in zip(edge,fill)) + bytes([round(coverage*255)])
         return bytes(round(out*(1-coverage) + ink*(coverage-inside) + bg*inside)
                      for out, ink, bg in zip(outer, edge, fill)) + b"\xff"
 
@@ -179,12 +184,18 @@ class Chrome:
             insets = (0,round(ch*.3))
         elif surface.kind == "field":
             insets = (0,max(2,round(ch*.15)))
+        elif surface.kind == "date":
+            # A real circle measured in pixels, centered on the middle text
+            # row. Two rows of calendar spacing keep adjacent dates clear.
+            diameter = min(width, 4*cw, 1.85*ch)
+            insets = ((width-diameter)/2, (height-diameter)/2)
         else:
             insets = (0,0)
         radius = radius_for(surface.kind, width-2*insets[0], height-2*insets[1], ch)
         rows = contour(width, height, radius, surface.fill, surface.outer,
                        surface.stroke, max(1, round(ch/20)), surface.accent,
-                       max(3, round(ch*.24)) if surface.accent else 0, insets)
+                       max(3, round(ch*.24)) if surface.accent else 0, insets,
+                       solid=surface.kind == "date")
         for x1, y1, x2, y2 in clips:
             clear = b"\0" * ((x2-x1)*4)
             for y in range(y1, y2):

@@ -76,6 +76,13 @@ class Theme:
             "panel_border": ("border", "float_bg"), "panel_title": ("quartz", "float_bg"),
             "button": ("white", "bg3"), "primary": ("quartz", "blue_selected"),
             "button_border": ("border", "bg3"),
+            "date_selected": ("quartz", "blue_selected"),
+            "date_selected_border": ("blue", "blue_selected"),
+            "date_today": ("blue", "float_bg"),
+            "date_today_border": ("blue", "float_bg"),
+            "focus_header": ("quartz", "cursor_line"),
+            "focus_header_dim": ("cyan", "cursor_line"),
+            "focus_header_border": ("cyan", "cursor_line"),
         }
         for name in ("blue", "orange", "green", "red", "purple", "brown"):
             specs[name] = (name, "bg")
@@ -102,7 +109,7 @@ class Theme:
         if not self.styles:
             if name in ("dim", "muted", "grid", "panel_dim", "status_dim"):
                 attr |= curses.A_DIM
-            elif name in ("selected", "active_tab", "active_tab_border", "field_focus", "field_active") or name.endswith(("_selected", "_selected_edge", "_selected_now")):
+            elif name in ("selected", "active_tab", "active_tab_border", "field_focus", "field_active", "date_today", "focus_header") or name.endswith(("_selected", "_selected_edge", "_selected_now")):
                 attr |= curses.A_REVERSE
         return attr
 

@@ -124,10 +124,10 @@ class Painter:
         self.chrome.add(rect, colors[fill][1], parent, colors[style][0], kind,
                         colors[accent][0] if accent else None, opaque)
 
-    def pill(self, rect, style="button", parent=None):
+    def pill(self, rect, style="button", parent=None, outline=None):
         outer = self.background(rect) if parent is None else self.theme.colors.get(parent, (None,None))[1]
         self.fill(rect, style)
-        edge = "active_tab_border" if style == "active_tab" else "button_border"
+        edge = outline or ("active_tab_border" if style == "active_tab" else "button_border")
         self.rounded(rect, style, edge, "pill", outer)
 
     @contextmanager

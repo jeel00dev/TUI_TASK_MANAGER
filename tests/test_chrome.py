@@ -196,6 +196,16 @@ class RoundedAppTests(VisualFixture):
         self.assertIn('10:00–12:00',line)
         self.assertTrue(line.endswith('   '))
 
+    def test_two_row_chip_keeps_text_clear_of_the_lower_edge(self):
+        self.add('Short work')
+        self.refresh()
+        rect=Rect(5,10,20,2)
+        self.app.paint.cells.clear()
+        self.app.views.card(rect,self.app.chosen(),DAY)
+        cells=self.app.paint.cells
+        self.assertEqual({10},{y for (x,y),(char,_) in cells.items() if char.strip()})
+        self.assertIsNone(self.app.paint.chrome.surfaces[-1].accent)
+
     def test_time_label_shortening_preserves_endpoints_or_marks_truncation(self):
         self.assertEqual('05:00–06:00',compact_time('05:00','06:00',11))
         self.assertEqual('05–06',compact_time('05:00','06:00',8))
@@ -210,7 +220,7 @@ class RoundedAppTests(VisualFixture):
             self.app.views.hits=[]
             self.app.views.details(rect)
             hits={v:r for r,a,v in self.app.views.hits if a=='key'}
-            self.assertEqual({'\n','e','x','r'},set(hits))
+            self.assertEqual({'\n','e','x','r','D'},set(hits))
             for key in ('e','x','r'):
                 self.assertEqual(3,hits[key].h)
                 self.assertGreater(hits[key].x,rect.x)
@@ -228,6 +238,43 @@ class RoundedAppTests(VisualFixture):
             self.assertEqual('completed',self.store.get(task.id).state)
             self.app.action('u')
             self.assertEqual('pending',self.store.get(task.id).state)
+
+    def test_date_badges_keep_normal_numerals_with_bounded_shapes(self):
+        self.refresh()
+        rect=Rect(100,6,38,19)
+        self.app.views.hits=[]
+        self.app.views.mini_calendar(rect)
+        cells=self.app.paint.cells
+        self.assertFalse(any(0x2460<=ord(c)<=0x2473 or 0x3251<=ord(c)<=0x325f
+                             for c,_ in cells.values()))
+        badges=[s for s in self.app.paint.chrome.surfaces if s.kind=='date']
+        self.assertTrue(badges)
+        for s in badges:
+            self.assertEqual(3,s.rect.h)
+            self.assertGreaterEqual(s.rect.w,3)
+        for day in (1,9,20,27,31):
+            self.app.day=DAY.replace(month=10,day=day)
+            self.app.views.date_label(Rect(10,10,5,3),self.app.day)
+            text=''.join(self.app.paint.cells.get((x,11),(' ',''))[0] for x in range(10,15))
+            self.assertIn(str(day),text)
+            badge=self.app.paint.chrome.surfaces[-1].rect
+            start=next(x for x in range(10,15) if self.app.paint.cells.get((x,11),(' ',''))[0]==str(day)[0])
+            self.assertEqual(2*badge.x+badge.w,2*start+len(str(day)))
+
+    def test_date_circle_has_padding_and_transparent_surroundings(self):
+        output=[]
+        chrome=Chrome(output.append,lambda:(8,17))
+        chrome.add(Rect(0,0,4,3),FILL,OUTER,BLUE,'date',opaque=False)
+        chrome.render()
+        width,height,rows=pngs(output[-1])[0]
+        colored=[(x,y) for y in range(height) for x in range(width) if pixel(rows,x,y)[3]]
+        xs,ys=zip(*colored)
+        self.assertLessEqual(abs((max(xs)-min(xs))-(max(ys)-min(ys))),1)
+        self.assertEqual(height-1,min(ys)+max(ys))
+        self.assertEqual(width-1,min(xs)+max(xs))
+        self.assertGreater(max(ys)-min(ys),17)
+        self.assertEqual(FILL+(255,),pixel(rows,16,25))
+        self.assertEqual(0,pixel(rows,0,0)[3])
 
     def test_every_view_mouse_and_minute_rule_with_graphics(self):
         self.add('Rounded task')

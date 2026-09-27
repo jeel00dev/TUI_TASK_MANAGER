@@ -61,7 +61,7 @@ class YearTests(VisualFixture):
             dates = [(r,v) for r,a,v in self.app.views.hits if a=='date' and v.month==month]
             rows = sorted(set(r.y for r,_ in dates))
             self.assertEqual(len(calendar.Calendar().monthdayscalendar(2021,month)),len(rows))
-            self.assertEqual(tile.y+3,rows[0])
+            self.assertEqual(tile.y+4,rows[0])
             self.assertLessEqual(max(r.y+r.h for r,_ in dates),tile.y+tile.h-3)
             self.assertGreaterEqual(max(r.y+r.h for r,_ in dates),tile.y+tile.h//2)
             heights = [r.h for r,_ in dates]

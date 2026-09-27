@@ -9,8 +9,7 @@ import unittest
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from taskcal.drawing import Rect, cell_width
-from taskcal.views import circled
+from taskcal.drawing import Rect
 from test_visual_calendar import VisualFixture, BASE, DAY
 from test_terminal import Screen, TerminalSession
 
@@ -28,9 +27,14 @@ class ResponsiveTests(VisualFixture):
                 self.assertLess(left.x+left.w,right.x)
             self.assertEqual(width-2,controls[-1].x+controls[-1].w)
             toolbar=[r for r,a,v in self.app.views.hits if r.y==4 and a=='key']
+            self.assertTrue(all(r.h==3 for r in toolbar))
             for i,left in enumerate(toolbar):
                 for right in toolbar[i+1:]:
                     self.assertTrue(left.x+left.w<=right.x or right.x+right.w<=left.x)
+            footer=[(r,v) for r,a,v in self.app.views.hits if r.y==52 and a=='key']
+            self.assertIn('D',[v for r,v in footer])
+            self.assertIn('u',[v for r,v in footer])
+            self.assertTrue(all(r.h==3 and r.x+r.w<=width-2 for r,v in footer))
 
     def click(self, action, value=None, double=False):
         rect=next(r for r,a,v in reversed(self.app.views.hits) if a==action and (value is None or v==value))
@@ -60,6 +64,14 @@ class ResponsiveTests(VisualFixture):
         with patch.object(self.app,"inspect") as inspect:
             self.click("task",str(second.id),double=True)
             inspect.assert_called_once()
+
+    def test_visible_delete_action_is_undoable(self):
+        task=self.add('Delete with the toolbar')
+        self.refresh()
+        self.click('key','D')
+        self.assertFalse(self.app.items)
+        self.click('key','u')
+        self.assertEqual(task.id,self.app.chosen().task.id)
 
     def test_minimum_canvas_clears_mouse_targets_and_preserves_selection(self):
         task=self.add()
@@ -124,7 +136,7 @@ class ResponsiveTests(VisualFixture):
     def test_mini_calendar_has_six_rows_and_clicks_the_actual_date(self):
         self.app.day=date(2026,8,15) # Six calendar rows.
         self.refresh()
-        rect=Rect(150,4,38,12)
+        rect=Rect(150,4,38,19)
         self.app.views.hits=[]
         self.app.views.mini_calendar(rect)
         hits=[(r,v) for r,a,v in self.app.views.hits if a=="date" and rect.contains(r.x,r.y)]
@@ -135,8 +147,6 @@ class ResponsiveTests(VisualFixture):
         self.app.mouse((r.x+1,r.y,"click",True))
         self.refresh()
         self.assertEqual(("day",target),(self.app.view,self.app.day))
-        for day in range(1,32):
-            self.assertLessEqual(cell_width(circled(day)),2)
 
     def test_time_marker_updates_on_minute_change_and_preserves_cards(self):
         self.add()
@@ -240,9 +250,9 @@ class MouseTerminalTests(TerminalSession):
         self.wait_for(lambda:bool(self._tasks()))
         self.assertEqual("Created entirely by mouse",self.task().title)
         self.click(58,1) # Inbox tab.
-        self.click(34,29) # Complete selected task.
+        self.click(31,28) # Complete selected task.
         self.wait_for(lambda:self.task().state=="completed")
-        self.click(51,29) # Undo once, despite press + release.
+        self.click(67,28) # Undo once, despite press + release.
         self.wait_for(lambda:self.task().state=="pending")
         self.send("q")
         self.proc.wait(timeout=3)

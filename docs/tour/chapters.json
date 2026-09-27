@@ -1,0 +1,112 @@
+[
+  {
+    "start_seconds": 0,
+    "title": "Task Calendar",
+    "caption": "A local calendar for your terminal."
+  },
+  {
+    "start_seconds": 4,
+    "title": "A calendar for your terminal",
+    "caption": "Local. Keyboard driven. Ready inside Kitty and tmux."
+  },
+  {
+    "start_seconds": 9.967,
+    "title": "Make room for focused work",
+    "caption": "Day view shows overlaps, free time and the current-time line."
+  },
+  {
+    "start_seconds": 16.967,
+    "title": "Your week, at a glance",
+    "caption": "h / l navigate ranges. Multi-day tasks stay one continuous task."
+  },
+  {
+    "start_seconds": 22.933,
+    "title": "A longer perspective",
+    "caption": "Month view keeps spanning work connected across weeks."
+  },
+  {
+    "start_seconds": 27.9,
+    "title": "All twelve months",
+    "caption": "y opens Year. Schedule work across months and even across years."
+  },
+  {
+    "start_seconds": 34.9,
+    "title": "Capture first. Plan later.",
+    "caption": "a + a title + Enter. Unscheduled work belongs in Inbox."
+  },
+  {
+    "start_seconds": 41.933,
+    "title": "Give the task its details",
+    "caption": "Dates, priority, tags, notes and recurrence. Ctrl-S saves."
+  },
+  {
+    "start_seconds": 51.967,
+    "title": "Everything in one place",
+    "caption": "Enter opens the full schedule and notes. Esc returns to your calendar."
+  },
+  {
+    "start_seconds": 57.933,
+    "title": "Your actions set the state",
+    "caption": "s starts. x completes. p returns to pending. Notifications never change state."
+  },
+  {
+    "start_seconds": 64.933,
+    "title": "Move the plan, keep the duration",
+    "caption": "r accepts +1h, +1d, +1w, tomorrow, or a new date."
+  },
+  {
+    "start_seconds": 70.9,
+    "title": "Delete is easy to recover",
+    "caption": "Click Delete or press D. Press u to bring the task back."
+  },
+  {
+    "start_seconds": 76.933,
+    "title": "Find the work that matters",
+    "caption": "/ searches titles, notes, tags and dates. f filters the visible calendar."
+  },
+  {
+    "start_seconds": 84.933,
+    "title": "A routine, without the re-entry",
+    "caption": "Complete one occurrence. Tomorrow remains pending. E edits the series."
+  },
+  {
+    "start_seconds": 94.0,
+    "title": "Keep the history",
+    "caption": "H keeps completed work searchable, including older archived tasks."
+  },
+  {
+    "start_seconds": 98.967,
+    "title": "Help is always close",
+    "caption": "? opens searchable commands. Type an action to find its shortcut."
+  },
+  {
+    "start_seconds": 104.033,
+    "title": "One more reminder, when you choose",
+    "caption": "z snoozes once for 5, 10, 15, 30 or 60 minutes."
+  },
+  {
+    "start_seconds": 110.033,
+    "title": "At home in tmux",
+    "caption": "Resize or split the terminal. Your selection and unsaved draft are preserved."
+  },
+  {
+    "start_seconds": 119.133,
+    "title": "Quick capture from the shell",
+    "caption": "The CLI, calendar and reminder process share the same local database."
+  },
+  {
+    "start_seconds": 127.1,
+    "title": "Reminders, with the calendar closed",
+    "caption": "A real desktop reminder at T minus 15 minutes. Demo clock advanced to 16:45."
+  },
+  {
+    "start_seconds": 133.1,
+    "title": "Start time, without notification spam",
+    "caption": "Demo clock advanced to 17:00. One start notification; the task remains pending."
+  },
+  {
+    "start_seconds": 139.1,
+    "title": "Get Task Calendar",
+    "caption": "Free under the MIT license."
+  }
+]

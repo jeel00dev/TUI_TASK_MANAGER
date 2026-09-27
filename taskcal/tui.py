@@ -477,6 +477,9 @@ class App:
                     return
             task = item.task
             rect = self.modal("TASK DETAILS", 88, 29, f"#{item.ref} · {task.state}" + (" · overdue" if item.overdue(self.at) else ""))
+            deletion = Rect(rect.x+rect.w-15,rect.y+1,11,1)
+            self.paint.centered(deletion.y,deletion,"D Delete","red@panel")
+            self.modal_hits.append((deletion,"key","D"))
             lines = [(task.title, self.views.color(item)), ("", "panel")]
             lines += [("Schedule   " + schedule_text(task, full=True), "panel")]
             if task.start:
