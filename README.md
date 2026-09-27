@@ -6,9 +6,9 @@ A local task calendar for Linux, built for Kitty, tmux and keyboard navigation.
 Plan by day, week, month or year. Use your mouse when it helps. Keep everything
 on your own machine—even reminders work without an internet connection.
 
-[Download v1.6.0](https://github.com/jeel00dev/TUI_TASK_MANAGER/releases/download/v1.6.0/task-calendar-1.6.0.tar.gz) · [Watch the feature tour](docs/task-calendar-tour.mp4) · [User guide](docs/guide.md) · [MIT license](LICENSE)
+[Download v1.6.0](https://github.com/jeel00dev/TUI_TASK_MANAGER/releases/download/v1.6.0/task-calendar-1.6.0.tar.gz) · [Watch the feature tour](https://jeel00dev.github.io/TUI_TASK_MANAGER/) · [User guide](docs/guide.md) · [MIT license](LICENSE)
 
-[![Task Calendar — week view](docs/week.png)](docs/task-calendar-tour.mp4)
+[![Task Calendar — week view](docs/week.png)](https://jeel00dev.github.io/TUI_TASK_MANAGER/)
 
 ## A calendar that works with you
 
@@ -107,9 +107,9 @@ task list --view week
 
 ## See it in action
 
-[![Watch the feature tour](docs/tour-poster.png)](docs/task-calendar-tour.mp4)
+[![Watch the feature tour](docs/tour-poster.png)](https://jeel00dev.github.io/TUI_TASK_MANAGER/)
 
-[Watch or download the feature tour](docs/task-calendar-tour.mp4) · **2:24 · 1080p · sound**
+[Watch the feature tour](https://jeel00dev.github.io/TUI_TASK_MANAGER/) · [Download MP4](https://github.com/jeel00dev/TUI_TASK_MANAGER/releases/download/v1.6.0/task-calendar-tour.mp4) · **2:24 · 1080p · sound**
 Recorded from the application with sample tasks, zooms, chapter captions and an
 original soundtrack. Audio is optional; every feature is explained on screen.
 

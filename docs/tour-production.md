@@ -33,4 +33,7 @@ are included under the repository's MIT license. AAC audio is normalized to a
 quiet listening level; the captions also support watching with sound off.
 The edit uses [FFmpeg's zoompan and drawing filters](https://ffmpeg.org/ffmpeg-filters.html#zoompan).
 The native notification styling follows the [Dunst configuration reference](https://dunst-project.org/documentation/).
-The README links to a poster, the repository MP4 and the downloadable release.
+The README's poster opens the static player on GitHub Pages. The player serves
+the MP4 as video/mp4 and provides native playback, sound, seeking and fullscreen
+controls. The separate download link uses the release asset. Repository blob
+pages cannot preview this video at its full size.

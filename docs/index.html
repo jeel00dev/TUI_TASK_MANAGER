@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Watch Task Calendar in action: a local terminal task calendar for Kitty and tmux.">
+  <title>Task Calendar — feature tour</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #171717; color: #f4f4f4; font: 16px/1.6 system-ui, sans-serif; }
+    main { width: min(1200px, calc(100% - 40px)); margin: 36px auto 60px; }
+    header, footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+    header { padding-bottom: 28px; border-bottom: 1px solid #383838; }
+    a { color: #85afd6; text-underline-offset: 4px; }
+    a:hover { color: #c8e0f6; }
+    a:focus-visible { outline: 2px solid #85afd6; outline-offset: 5px; border-radius: 3px; }
+    .brand { color: #f4f4f4; font-weight: 650; text-decoration: none; }
+    h1 { margin: 32px 0 8px; font-size: clamp(28px, 4vw, 42px); line-height: 1.2; letter-spacing: -.025em; }
+    p { color: #bdbdbd; margin: 0 0 26px; }
+    video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #111; border: 1px solid #383838; border-radius: 16px; }
+    footer { margin-top: 22px; color: #a0a0a0; font-size: 14px; }
+    .download { display: inline-block; padding: 10px 17px; border: 1px solid #454545; border-radius: 10px; color: #eee; text-decoration: none; background: #262626; }
+    .download:hover { background: #313131; color: #fff; }
+    @media (max-width: 600px) { main { width: calc(100% - 24px); margin-top: 20px; } video { border-radius: 10px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <a class="brand" href="https://github.com/jeel00dev/TUI_TASK_MANAGER">Task Calendar</a>
+      <a href="https://github.com/jeel00dev/TUI_TASK_MANAGER#download-and-install">Install &amp; get started</a>
+    </header>
+    <h1>Your time. Your terminal.</h1>
+    <p>Day, week, month and year planning. See the complete workflow in 2 minutes.</p>
+    <video controls playsinline preload="metadata" poster="tour-poster.png" aria-label="Task Calendar feature tour with on-screen explanations and music">
+      <source src="task-calendar-tour.mp4" type="video/mp4">
+      <p>Your browser cannot play this video. <a href="https://github.com/jeel00dev/TUI_TASK_MANAGER/releases/download/v1.6.0/task-calendar-tour.mp4">Download the MP4</a> to watch it locally.</p>
+    </video>
+    <footer>
+      <span>2:24 · 1080p · original music · on-screen explanations</span>
+      <a class="download" href="https://github.com/jeel00dev/TUI_TASK_MANAGER/releases/download/v1.6.0/task-calendar-tour.mp4">Download video · 19 MB</a>
+    </footer>
+  </main>
+</body>
+</html>
