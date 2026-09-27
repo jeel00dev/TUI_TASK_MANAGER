@@ -46,6 +46,14 @@ def duration(delta):
     return " ".join(value for value in (f"{days}d" if days else "", f"{hours}h" if hours else "", f"{minutes}m" if minutes else "") if value) or "0m"
 
 
+def compact_time(starts, ends, width):
+    """Keep complete endpoints where possible, shortening whole hours first."""
+    full = starts + "–" + ends
+    short = starts.replace(":00", "") + "–" + ends.replace(":00", "")
+    return next((text for text in (full, short) if cell_width(text) <= width),
+                ellipsis(full, width))
+
+
 class Views:
     def __init__(self, app):
         self.a = app
@@ -368,43 +376,68 @@ class Views:
         color = self.color(item)
         fill = color + ("_selected" if selected else "_fill")
         edge = fill + "_edge"
-        title = self.title(item)
         dl, dh = bounds(day, "day")
         starts = item.task.start.strftime("%H:%M") if item.task.start >= dl else "←00:00"
         ends = item.task.end.strftime("%H:%M") if item.task.end < dh else "24:00→"
-        timing = starts + "–" + ends
         with p.within(rect):
-            content_rows = [y for y in range(rect.y, rect.y+rect.h) if y != marker_y]
-            if len(content_rows) < 3 and not p.chrome:
-                # A compact chip is intentionally borderless; don't draw broken boxes.
+            if p.chrome:
                 outer = p.background(rect)
                 p.fill(rect,fill)
-                p.text(content_rows[0],rect.x,"▌",edge,1)
-                pad = 2 if rect.w >= 6 else 1
-                p.text(content_rows[0],rect.x+pad,ellipsis(title,rect.w-2*pad),fill,rect.w-2*pad,bold=selected)
-                if len(content_rows) == 2:
-                    p.text(content_rows[1],rect.x+pad,timing,edge,rect.w-2*pad)
+                p.rounded(rect,fill,edge,"task",outer,accent=color)
+            elif rect.h >= 3:
+                p.box(rect,style=edge,fill=fill,edge_aligned=True)
             else:
-                if p.chrome:
-                    outer = p.background(rect)
-                    p.fill(rect,fill)
-                    p.rounded(rect,fill,edge,"task",outer,accent=color)
-                    if len(content_rows) > 2:
-                        content_rows = content_rows[:-1]
-                else:
-                    p.box(rect,style=edge,fill=fill,edge_aligned=True)
-                    content_rows = [y for y in content_rows if rect.y < y < rect.y+rect.h-1]
-                available = len(content_rows)
-                lines = wrap(title,max(1,rect.w-4))
-                title_rows = max(1,available-1) if available>1 else 1
-                for index,line in enumerate(lines[:title_rows]):
-                    if index==title_rows-1 and len(lines)>title_rows:
-                        line=ellipsis(" ".join(lines[index:]),rect.w-4)
-                    p.text(content_rows[index],rect.x+2,line,fill,rect.w-4,bold=selected)
-                if available>1:
-                    p.text(content_rows[-1],rect.x+2,timing,edge,rect.w-4)
+                p.fill(rect,fill)
+            self.card_content(rect, item, starts, ends, fill, edge, marker_y)
         self.card_rects.append((rect,item.ref))
         self.hit(rect,"task",item.ref)
+
+    def card_content(self, rect, item, starts, ends, fill, edge, marker_y):
+        """Center one text group, with a hanging state symbol and shared inset.
+
+        A calendar block cannot grow beyond its scheduled interval. Short blocks
+        use one line; taller blocks gain wrapped titles, time and breathing room.
+        The minute rule owns its row, so content never gets overwritten by it.
+        """
+        p = self.p
+        rows = [y for y in range(rect.y,rect.y+rect.h) if y != marker_y]
+        if not rows:
+            return
+        pad = 3 if rect.w >= 40 else 2 if rect.w >= 10 else 1
+        width = rect.w-2*pad
+        gutter = 2 if width >= 6 else 0
+        x, width = rect.x+pad+gutter, width-gutter
+        if width <= 0:
+            return
+        title = self.title(item)[2:]  # State has its own column on every line.
+        timing = compact_time(starts, ends, width)
+        selected = self.selected(item)
+        if len(rows) < 4:
+            y = min(rows,key=lambda row:(abs(2*row-(2*rect.y+rect.h-1)),-row))
+            # Wide, shallow blocks can retain both fields on the same baseline.
+            time_width = cell_width(timing)
+            inline = width >= time_width+14
+            title_width = width-time_width-2 if inline else width
+            p.text(y,x,ellipsis(title,title_width),fill,title_width,bold=selected)
+            if inline:
+                p.text(y,x+width-time_width,timing,edge,time_width)
+        else:
+            rows = rows[1:-1]  # Equal top/bottom inset, clear of the accent.
+            lines = wrap(title,width)
+            count = min(3,len(lines),len(rows)-1)
+            if len(lines) > count:
+                lines[count-1] = ellipsis(" ".join(lines[count-1:]),width)
+            gap = int(len(rows) >= count+3)
+            # Center using screen coordinates, including a possible minute row.
+            # On a half-cell tie, leave the extra breathing room above the text.
+            offset = min(range(len(rows)-count-gap), key=lambda i:
+                         (abs(rows[i]+rows[i+count+gap]-(2*rect.y+rect.h-1)),-i))
+            y = rows[offset]
+            for index,line in enumerate(lines[:count]):
+                p.text(rows[offset+index],x,line,fill,width,bold=selected)
+            p.text(rows[offset+count+gap],x,timing,edge,width)
+        if gutter:
+            p.text(y,x-gutter,self.symbol(item),edge,1)
 
     def bar(self, rect, item, lo, hi):
         color = self.color(item)
@@ -659,6 +692,10 @@ class Views:
             p.text(y,x,"Nothing selected","panel_dim",w)
             p.text(y+2,x,"a capture · A schedule","accent",w)
             return
+        # Inspection is a quiet header action; mutations share one roomy row.
+        open_rect = Rect(rect.x+rect.w-10,rect.y+1,8,1)
+        p.centered(open_rect.y,open_rect,"Open ↵","accent@panel")
+        self.hit(open_rect,"key","\n")
         task=item.task
         color=self.color(item)
         lines=[(line,color) for line in wrap(task.title,w)[:2]]
@@ -682,14 +719,13 @@ class Views:
         if task.notes:
             lines.append(("","panel"))
             lines.extend((line,"panel_dim") for line in wrap(task.notes,w))
-        available=max(0,rect.h-7)
+        available=max(0,rect.h-8)
         for index,(text,style) in enumerate(lines[:available]):
             if index==available-1 and len(lines)>available:
                 text=ellipsis(text+" …",w)
             p.text(y+index,x,text,style,w,bold=index==0)
-        self.button(Rect(x,rect.y+rect.h-3,w,1),"Enter · full details","key","\n")
         for (left,width),(label,key) in zip(tracks(x,w,3,1),(("e Edit","e"),("x Done","x"),("r Move","r"))):
-            self.button(Rect(left,rect.y+rect.h-2,width,1),label,"key",key)
+            self.button(Rect(left,rect.y+rect.h-4,width,3),label,"key",key)
 
     def summary(self, rect):
         a, p = self.a, self.p

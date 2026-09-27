@@ -4,12 +4,14 @@ import re
 import struct
 import unittest
 import zlib
+from datetime import timedelta
 from unittest.mock import Mock, patch
 
 from taskcal.chrome import Chrome, contour, inside_tmux, radius_for, supported
 from taskcal.drawing import Rect
 from test_terminal import Screen
-from test_visual_calendar import VisualFixture
+from test_visual_calendar import VisualFixture, BASE, DAY
+from taskcal.views import compact_time
 
 
 FILL, OUTER, EDGE, BLUE = (49,49,49), (23,23,23), (59,59,59), (64,153,255)
@@ -153,6 +155,79 @@ class RoundedAppTests(VisualFixture):
         with patch.dict('os.environ',{},clear=True), patch.multiple('curses',**stubs,COLORS=256,COLOR_PAIRS=256,create=True):
             self.app.theme.install()
         self.app.paint.chrome=Chrome(lambda data:None,lambda:(8,17))
+
+    def test_card_text_has_balanced_insets_at_different_sizes(self):
+        self.add('Start PostgreSQL series',start=BASE+timedelta(hours=5),end=BASE+timedelta(hours=6))
+        self.refresh()
+        item=self.app.chosen()
+        for width in (24,40,90):
+            for height in (4,5,8,16):
+                with self.subTest(width=width,height=height):
+                    rect=Rect(5,10,width,height)
+                    self.app.paint.cells.clear()
+                    self.app.views.card(rect,item,DAY)
+                    cells=self.app.paint.cells
+                    ink=[(x,y) for (x,y),(char,_) in cells.items() if char.strip()]
+                    top=min(y for x,y in ink)-rect.y
+                    bottom=rect.y+rect.h-1-max(y for x,y in ink)
+                    self.assertGreaterEqual(min(top,bottom),1)
+                    self.assertLessEqual(abs(top-bottom),1)
+                    self.assertGreaterEqual(min(x for x,y in ink)-rect.x,2)
+                    self.assertGreaterEqual(rect.x+rect.w-1-max(x for x,y in ink),2)
+                    lines=[''.join(cells.get((x,y),(' ',''))[0] for x in range(rect.x,rect.x+rect.w))
+                           for y in range(rect.y,rect.y+rect.h)]
+                    title=next(line for line in lines if 'Start' in line)
+                    timing=next(line for line in lines if '05:00–06:00' in line)
+                    self.assertEqual(title.index('Start'),timing.index('05:00'))
+                    if width==24 and height>=8:
+                        continuation=next(line for line in lines if 'series' in line)
+                        self.assertEqual(title.index('Start'),continuation.index('series'))
+
+    def test_shallow_wide_card_shows_title_and_time_on_centered_row(self):
+        self.add('Short session')
+        self.refresh()
+        rect=Rect(5,10,80,3)
+        self.app.paint.cells.clear()
+        self.app.views.card(rect,self.app.chosen(),DAY)
+        cells=self.app.paint.cells
+        self.assertEqual({11},{y for (x,y),(char,_) in cells.items() if char.strip()})
+        line=''.join(cells[(x,11)][0] for x in range(rect.x,rect.x+rect.w))
+        self.assertIn('Short session',line)
+        self.assertIn('10:00–12:00',line)
+        self.assertTrue(line.endswith('   '))
+
+    def test_time_label_shortening_preserves_endpoints_or_marks_truncation(self):
+        self.assertEqual('05:00–06:00',compact_time('05:00','06:00',11))
+        self.assertEqual('05–06',compact_time('05:00','06:00',8))
+        self.assertEqual('←00–24→',compact_time('←00:00','24:00→',8))
+        self.assertTrue(compact_time('05:30','06:45',8).endswith('…'))
+
+    def test_details_actions_are_separate_from_content_and_clickable(self):
+        task=self.add('Selected task',notes='Long notes '*40)
+        self.refresh()
+        for width,height in ((32,12),(38,20),(48,28)):
+            rect=Rect(100,6,width,height)
+            self.app.views.hits=[]
+            self.app.views.details(rect)
+            hits={v:r for r,a,v in self.app.views.hits if a=='key'}
+            self.assertEqual({'\n','e','x','r'},set(hits))
+            for key in ('e','x','r'):
+                self.assertEqual(3,hits[key].h)
+                self.assertGreater(hits[key].x,rect.x)
+                self.assertLess(hits[key].x+hits[key].w,rect.x+rect.w)
+            self.assertEqual(1,len({hits[key].y for key in ('e','x','r')}))
+            for left,right in zip(('e','x'),('x','r')):
+                self.assertLess(hits[left].x+hits[left].w,hits[right].x)
+            self.assertEqual(rect.y+1,hits['\n'].y)
+            with patch.object(self.app,'inspect') as inspect:
+                r=hits['\n']
+                self.app.mouse((r.x+1,r.y,'click',False))
+                inspect.assert_called_once()
+            r=hits['x']
+            self.app.mouse((r.x+r.w//2,r.y+1,'click',False))
+            self.assertEqual('completed',self.store.get(task.id).state)
+            self.app.action('u')
+            self.assertEqual('pending',self.store.get(task.id).state)
 
     def test_every_view_mouse_and_minute_rule_with_graphics(self):
         self.add('Rounded task')

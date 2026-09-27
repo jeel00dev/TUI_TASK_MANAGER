@@ -106,7 +106,8 @@ snooze actions.
   refreshes on each minute, including while the application is idle.
   It has a reserved row across the entire grid, passing over task blocks and
   column dividers without covering task titles or times.
-  Exact times remain in each block and the details panel.
+  Blocks show exact times when space permits; the selected-task panel and full
+  inspection always include the complete schedule.
 - **Day:** a larger time grid, concurrent tasks in adjacent columns, and exact
   free periods in the gaps. All-day spans occupy a separate strip. Earlier
   overdue work is called out above the grid and in the sidebar.
@@ -156,6 +157,11 @@ tabs have equal widths and rounded rectangles; small buttons have capsule ends.
 Radii scale with the terminal's cell
 size: about 18 pixels for panels, 14 for tasks and 12 for fields at a 17-pixel
 cell height. Fills meet the thin outlines, and tasks have a thicker colored base.
+Task titles and times form a vertically centered group with shared text insets.
+Wrapped titles keep their alignment after the state symbol. Shallow blocks use
+one line, adding the time alongside the title when wide enough. Taller blocks
+gain up to three title lines and a separate time row. The details panel has a
+header action to open the task and one spaced row for Edit, Done and Move.
 Kitty draws these locally generated borders behind ordinary terminal text; mouse
 input, text selection, and the live time rule stay native. No font or graphics
 packages are required. Other terminals retain character-based borders. Inside tmux

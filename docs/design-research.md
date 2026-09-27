@@ -248,3 +248,27 @@ Visual checks covered window switching, moving the app into a right-hand split,
 the status bar above the pane, font changes, and minimum-size recovery with an
 unsaved draft. The pane's passthrough option was restored after exit. The eight
 preview images now show the application running inside tmux.
+
+## Task content and selected-task actions (1.5.1)
+
+The previous cards placed the title on their first row and the time near their
+last row. This gave wrapped titles uneven margins and separated related text.
+Cards now center a single title/time group vertically. Side padding grows from
+two to three columns on wider blocks; the state symbol has a separate column,
+so wrapped text and time labels share the same left edge. Normal cards reserve
+a blank row above and below their content. Short blocks use a single centered
+line, with an inline time range when wide enough. Larger blocks show up to three
+title lines. They retain their scheduled height rather than expanding into
+neighboring tasks. The current-time rule retains its own uninterrupted row.
+
+The details panel replaces the stacked, single-row capsules with an Open action
+in the header and three equal, three-row controls at the bottom. Content stops
+before the controls, and every action remains reachable by keyboard or mouse.
+The complete task title and schedule remain accessible through inspection.
+
+Validation: all 115 tests passed, including balanced card insets, wrapped-title
+alignment, compact time labels, and sidebar action bounds. The installed 1.5.1
+launcher passed mouse-event checks through Kitty/tmux for capture, save,
+selection, Open, Edit, Move, completion and undo. Visual review covered all
+calendar scales, compact windows, font resizing, and an unsaved draft through
+the minimum-size screen. Preview images use disposable task data.
